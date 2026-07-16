@@ -1,106 +1,76 @@
 # 🔬 AI Research Assistant
 
-AI Research Assistant is a modern, high-performance Streamlit dashboard designed to speed up scientific publication and technical document reading. By combining robust PDF ingestion with context-aware LLM reasoning powered by **Google Gemini 2.5 Flash**, the dashboard automates document structural summary parsing, interactive Q&A, and quiz comprehension assessments.
+AI Research Assistant is a simple and clean Streamlit application that helps you read and understand PDF research papers and technical documents. Powered by the Google Gemini API, it extracts text, generates summaries, answers questions, and creates interactive quizzes.
 
 ---
 
-## 🎨 Preview & Screenshots
-Below is a visual layout preview of the application landing workspace:
+## 📸 Screenshots & Working Demo
 
-![Landing Workspace Screenshot](screenshots/landing_page_placeholder.png)
-*(Replace this with a real screenshot of your application workspace)*
+### Application Layout
+Here is the clean and modern landing page of the application:
+
+![App Landing Page](screenshots/landing_page.png)
+
+### Working Demo
+See how the application parses PDFs and extracts information:
+
+![App Working Demo](screenshots/working_demo.webp)
 
 ---
 
-## ✨ Features
-1. **📄 PDF Text Extraction**: Reads raw binary PDF uploads, loops page ranges, extracts text on the fly using `PyPDF2`, and handles scanned/blank pages safely.
-2. **📊 Contextual Summaries**: Dynamically parses the document content to output three structured sections—*Executive Summary*, *Key Takeaways*, and *Important Topics*—displayed in clean collapsible cards.
-3. **💬 Grounded Q&A**: Refined question answering bounded strictly to the uploaded document's context, returning a fallback notice if answers cannot be found.
-4. **📝 Comprehension Quiz**: Automatically generates a 5-question multiple-choice check with interactive option selections and immediate validation banners.
-5. **⚡ State Caching & Performance**: Uses Streamlit's `st.session_state` to cache summaries and quizzes, preventing repeat API requests during tab switching or Q&A runs.
-6. **💎 Premium Aesthetics**: Custom CSS injecting the elegant `Outfit` typography, dropshadow container cards, transitions, and dark/light theme adjustments.
+## ✨ Key Features
+- **📄 PDF Text Ingestion**: Upload any PDF file to extract all text content automatically.
+- **📊 Auto Summarization**: Get a structured Executive Summary, Key Takeaways, and list of Important Topics.
+- **💬 Grounded Q&A**: Ask questions and get answers based strictly on the document text.
+- **📝 Comprehension Quiz**: Take a 5-question multiple-choice quiz to test your understanding.
+- **⚡ Smart Caching**: Caches summaries and quizzes so the app remains fast and responsive.
 
 ---
 
 ## 🛠️ Tech Stack
-- **Frontend Framework**: [Streamlit](https://streamlit.io/) (Python-based dashboard)
-- **Generative AI Platform**: [Google Gemini API](https://ai.google.dev/) via the modern `google-genai` SDK
-- **Ingestion Parser**: [PyPDF2](https://pypi.org/project/PyPDF2/) (Binary PDF text extractor)
-- **Environment Config**: `python-dotenv` (Secrets manager)
-- **Style Engine**: Vanilla CSS injected via Streamlit markdown bindings
+- **Python**: Core programming language.
+- **Streamlit**: Web interface framework.
+- **Google Gemini API**: Generates summaries, Q&A responses, and quizzes.
+- **PyPDF2**: Extracts text from PDF files.
+- **python-dotenv**: Manages configuration keys.
 
 ---
 
-## 📁 Folder Structure
-```text
-ai_research_assistant/
-│
-├── app.py              # Main dashboard script containing layouts & tab loops
-├── ai_service.py       # Gemini API caller, prompt engineering, and parsing
-├── pdf_processor.py    # PyPDF2 file text ingestion and error checkers
-├── utils.py            # Custom CSS styling stylesheets & size formatting utilities
-│
-├── requirements.txt    # Project dependencies list
-├── .gitignore          # Excluded cache folders and credential files
-├── .env.example        # Environment variable credentials template
-└── README.md           # Repository documentation and details
-```
+## 📁 Project Structure
+- [app.py](file:///c:/Users/User/.gemini/antigravity-ide/scratch/ai_research_assistant/app.py): The main Streamlit web application.
+- [ai_service.py](file:///c:/Users/User/.gemini/antigravity-ide/scratch/ai_research_assistant/ai_service.py): Service code for calling the Google Gemini API.
+- [pdf_processor.py](file:///c:/Users/User/.gemini/antigravity-ide/scratch/ai_research_assistant/pdf_processor.py): Utility code to extract text from PDF files.
+- [utils.py](file:///c:/Users/User/.gemini/antigravity-ide/scratch/ai_research_assistant/utils.py): Styling and layout helper functions.
+- [requirements.txt](file:///c:/Users/User/.gemini/antigravity-ide/scratch/ai_research_assistant/requirements.txt): List of Python packages required for the project.
 
 ---
 
-## 🚀 Installation & Setup
+## 🚀 How to Run the Project
 
-### Prerequisites
-- Python 3.10 or higher
-- A Google Gemini API Key (Get one from [Google AI Studio](https://aistudio.google.com/))
-
-### 1. Clone & Navigate
-```bash
-git clone https://github.com/Khushichoudhary29/ai_research_assistant.git
-cd ai_research_assistant
-```
-
-### 2. Install Dependencies
+### 1. Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Environment Configuration
-Create a `.env` file in the project root directory:
-```bash
-cp .env.example .env
-```
-Open `.env` and configure your API key:
+### 2. Configure API Key
+Create a file named `.env` in the project root directory and add your Google Gemini API key:
 ```env
-GEMINI_API_KEY=your_actual_gemini_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
----
-
-## 🏃 How to Run
-Launch the Streamlit server from your terminal:
+### 3. Run the application
 ```bash
 streamlit run app.py
 ```
-The application will automatically open in a new browser tab at `http://localhost:8501`.
 
 ---
 
-## 📈 Future Improvements
-- **Multi-File Support**: Allow uploading and indexing multiple publications concurrently.
-- **RAG & Vector Embeddings**: Integrate a local vector store (e.g. FAISS or ChromaDB) to handle very long research books beyond standard token windows.
-- **Excel/CSV Export**: Add buttons to export summaries or quiz results for offline study trackers.
-- **Scanned OCR Ingestion**: Integrate Tesseract or Google Cloud Vision OCR to extract text from heavy image-only PDFs.
-
----
-
-## 🎓 Learning Outcomes
-- **Structured LLM Outputs**: Utilizing the `google-genai` client configurations (`response_mime_type="application/json"`) to retrieve structured data directly.
-- **Streamlit Caching & Lifecycles**: Designing session-state caches to persist heavy compute/API payloads across interactive Streamlit redraw triggers.
-- **Document Grounding**: Constructing prompt wrappers to enforce strict context boundaries and zero-shot fallback responses.
-- **PEP8 Formatting**: Designing DRY, clean helper functions, writing modular code, and following Python coding standards.
+## 📈 Future Enhancements
+- Support for uploading multiple documents.
+- Adding vector search (RAG) to handle extremely long books.
+- Exporting quiz scores and summary text.
 
 ---
 
 ## 📄 License
-This project is open-source and available under the [MIT License](LICENSE).
+This project is open-source and licensed under the MIT License.
