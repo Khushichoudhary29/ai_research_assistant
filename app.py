@@ -3,6 +3,7 @@
 import streamlit as st
 from utils import inject_custom_css, format_file_size
 from pdf_processor import extract_text_from_pdf
+from ai_service import generate_response
 
 # Set up page configurations first
 st.set_page_config(
@@ -169,18 +170,29 @@ if uploaded_file is not None:
                 st.write(prompt)
             st.session_state.messages.append({"role": "user", "content": prompt})
             
-            # Generate simulated/mock reply to prompt
-            simulated_response = (
-                f"Based on the analysis of '{file_name}', the section matching your query ('{prompt}') "
-                "indicates that the framework achieves optimal results by deploying multi-threaded threads in Python, "
-                "as detail-oriented in Section 4. If you require further clarification, try asking for a "
-                "deeper dive into the performance results."
+            # Construct a structured prompt providing the document context to Gemini
+            prompt_with_context = (
+                f"You are a helpful AI Research Assistant analyzing the uploaded document '{file_name}'.\n\n"
+                f"Here is the text context extracted from the document:\n"
+                f"---START CONTEXT---\n"
+                f"{extracted_text[:40000]}\n"
+                f"---END CONTEXT---\n\n"
+                f"User Question: {prompt}\n\n"
+                f"Please answer the user's question accurately and clearly, relying on the text context provided above."
             )
+            
+            # Request real response from Gemini API inside a spinner
+            with st.spinner("Assistant is analyzing and typing..."):
+                try:
+                    response_text = generate_response(prompt_with_context)
+                except Exception as e:
+                    st.error(f"⚠️ Error generating response: {str(e)}")
+                    response_text = "I encountered an error while trying to process your request. Please check your Gemini API key configuration and try again."
             
             # Display assistant reply
             with st.chat_message("assistant"):
-                st.write(simulated_response)
-            st.session_state.messages.append({"role": "assistant", "content": simulated_response})
+                st.write(response_text)
+            st.session_state.messages.append({"role": "assistant", "content": response_text})
             
     # Tab 3: Comprehension Quiz
     with tab_quiz:
