@@ -3,7 +3,7 @@
 import streamlit as st
 from utils import inject_custom_css, format_file_size
 from pdf_processor import extract_text_from_pdf
-from ai_service import generate_response
+from ai_service import generate_response, generate_summary_sections
 
 # Set up page configurations first
 st.set_page_config(
@@ -72,6 +72,24 @@ if uploaded_file is not None:
             }
         ]
         
+    # 2b. Generate and Cache AI Summaries if text extraction was successful
+    if success:
+        if "doc_summary" not in st.session_state or st.session_state.get("summary_file") != file_name:
+            with st.spinner("🔬 AI is analyzing the document text and generating summaries..."):
+                try:
+                    summary_data = generate_summary_sections(extracted_text)
+                    st.session_state.doc_summary = summary_data
+                    st.session_state.summary_file = file_name
+                except Exception as e:
+                    st.error(f"⚠️ Failed to generate AI summary: {str(e)}")
+                    # Fallback placeholders in case of failures
+                    st.session_state.doc_summary = {
+                        "executive_summary": "Error: Unable to generate executive summary due to API failure.",
+                        "key_takeaways": "Error: Unable to generate key takeaways due to API failure.",
+                        "important_topics": "Error: Unable to generate important topics due to API failure."
+                    }
+                    st.session_state.summary_file = file_name      
+        
     # 3. Display Document Information Card
     status_color = "#2a9d8f" if success else "#e63946"
     status_label = "⚡ Ready for Queries" if success else "❌ Extraction Failed"
@@ -125,33 +143,22 @@ if uploaded_file is not None:
     # Tab 1: Summary Overview
     with tab_summary:
         st.subheader("Generated Document Summary")
-        st.info("💡 Below is an AI-generated structural breakdown of the uploaded publication.")
+        st.info("💡 Below is the AI-generated structural breakdown of the uploaded publication, organized into detailed categories.")
         
-        # Display summary in two clean columns
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("""
-            ### 📖 Executive Abstract
-            This paper presents a scalable architecture designed to address high latency and resource overhead constraints in real-time inference processing. The proposed methodology introduces a decoupled data polling engine working alongside dynamic worker allocation, aiming to achieve faster turnaround times for processing large document corpuses.
+        # Retrieve cached summary sections
+        if success and "doc_summary" in st.session_state:
+            summary = st.session_state.doc_summary
             
-            ### 🎯 Key Contributions & Takeaways
-            - **Performance Ingress**: Benchmark runs demonstrate an average throughput improvement of 22% over vanilla solutions.
-            - **Efficient Overhead**: Reduces active RAM consumption by up to 35% through garbage collection schedules.
-            - **Seamless Integration**: Fully compatible with existing RESTful API servers and event-driven architectures.
-            """)
-            
-        with col2:
-            st.markdown("""
-            ### 🛠️ Process & Methodology
-            1. **Ingestion & Text Extraction**: Parsing files concurrently using custom layout recognition scripts.
-            2. **Chunking & Indexing**: Converting text into dense embeddings and building visual references index tree.
-            3. **Asynchronous Dispatch**: Offloading heavy computing tasks to background tasks while maintaining responsive UI.
-            
-            ### 🔮 Future Directions
-            - Expanding validation to non-standard formatted scientific PDFs containing mixed tables.
-            - Introducing direct integration for caching common mathematical formulas and representations.
-            """)
+            with st.expander("📖 Executive Summary", expanded=True):
+                st.markdown(summary.get("executive_summary", "No summary available."))
+                
+            with st.expander("🎯 Key Takeaways", expanded=False):
+                st.markdown(summary.get("key_takeaways", "No takeaways available."))
+                
+            with st.expander("🏷️ Important Topics", expanded=False):
+                st.markdown(summary.get("important_topics", "No topics available."))
+        else:
+            st.warning("⚠️ Document analysis is not available because text extraction failed.")
             
     # Tab 2: Ask AI Chat
     with tab_ask_ai:

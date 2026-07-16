@@ -2,6 +2,7 @@
 
 import os
 from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 
 # Load environment variables from the .env file
@@ -51,3 +52,58 @@ def generate_response(prompt):
     except Exception as e:
         # Catch and surface any execution errors
         raise Exception(f"Gemini API failure: {str(e)}")
+
+
+def generate_summary_sections(extracted_text):
+    """
+    Generates three structured summaries (Executive Summary, Key Takeaways, Important Topics)
+    for a given document text in a single JSON API call.
+    
+    Parameters:
+        extracted_text (str): The document text content.
+        
+    Returns:
+        dict: A dictionary with keys: 'executive_summary', 'key_takeaways', 'important_topics'.
+        
+    Raises:
+        ValueError: If the API key is missing.
+        Exception: If the API call or JSON parsing fails.
+    """
+    global client
+    
+    # If client is not initialized, check for API key again
+    if not client:
+        current_key = os.getenv("GEMINI_API_KEY")
+        if not current_key:
+            raise ValueError(
+                "GEMINI_API_KEY is not set or configured. Please set it in your .env file."
+            )
+        client = genai.Client(api_key=current_key)
+        
+    prompt = (
+        "Analyze the following document text and generate three structured sections:\n"
+        "1. Executive Summary: A concise, executive-level summary explaining the purpose, main points, and findings.\n"
+        "2. Key Takeaways: A markdown bulleted list highlighting the most critical insights or actionable conclusions.\n"
+        "3. Important Topics: A markdown bulleted list highlighting the key subjects, themes, or concepts covered.\n\n"
+        f"Document Text:\n{extracted_text[:40000]}\n\n"
+        "Return the output as a valid JSON object with the exact keys: 'executive_summary', 'key_takeaways', 'important_topics'."
+    )
+    
+    try:
+        # Request a JSON mime type response from the Gemini client
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json"
+            )
+        )
+        
+        # Load and parse the returned JSON string
+        import json
+        parsed_data = json.loads(response.text)
+        return parsed_data
+        
+    except Exception as e:
+        # Catch and handle parsing or API errors
+        raise Exception(f"Failed to generate structured summaries: {str(e)}")
