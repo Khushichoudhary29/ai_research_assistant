@@ -1,0 +1,16 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.env.local
+.env.*
+
+# Local test PDF documents
+sample.pdf
+corrupted.pdf
+
+# Streamlit config and cache
+.streamlit/

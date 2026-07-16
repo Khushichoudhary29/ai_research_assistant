@@ -1,8 +1,8 @@
 """Main entry point for the Streamlit web application of the AI Research Assistant."""
 
 import streamlit as st
-import pypdf
 from utils import inject_custom_css, format_file_size
+from pdf_processor import extract_text_from_pdf
 
 # Set up page configurations first
 st.set_page_config(
@@ -57,13 +57,10 @@ if uploaded_file is not None:
     file_name = uploaded_file.name
     file_size = uploaded_file.size
     
-    # Attempt to extract page count using pypdf library
-    try:
-        pdf_reader = pypdf.PdfReader(uploaded_file)
-        num_pages = len(pdf_reader.pages)
-    except Exception:
-        num_pages = 12  # Fallback dummy page count in case of parsing errors
-        
+    # Extract text from the uploaded PDF using PyPDF2 with error handling
+    extracted_text, success, status_message, num_pages = extract_text_from_pdf(uploaded_file)
+    char_count = len(extracted_text)
+    
     # 2. Reset Chat History if a new file is uploaded
     if "current_file" not in st.session_state or st.session_state.current_file != file_name:
         st.session_state.current_file = file_name
@@ -75,6 +72,9 @@ if uploaded_file is not None:
         ]
         
     # 3. Display Document Information Card
+    status_color = "#2a9d8f" if success else "#e63946"
+    status_label = "⚡ Ready for Queries" if success else "❌ Extraction Failed"
+    
     st.markdown(f"""
     <div class="premium-card">
         <h3>📄 Document Information</h3>
@@ -92,12 +92,27 @@ if uploaded_file is not None:
                 <div class="metadata-value">{num_pages} pages</div>
             </div>
             <div class="metadata-item">
+                <div class="metadata-label">Character Count</div>
+                <div class="metadata-value">{char_count:,} characters</div>
+            </div>
+            <div class="metadata-item">
                 <div class="metadata-label">Status</div>
-                <div class="metadata-value" style="color: #2a9d8f; font-weight: bold;">⚡ Ready for Queries</div>
+                <div class="metadata-value" style="color: {status_color}; font-weight: bold;">{status_label}</div>
             </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+    # 4. Display extraction status and preview
+    if success:
+        st.success(f"🎉 {status_message}")
+        with st.expander("🔍 View Extracted Text Preview", expanded=False):
+            if extracted_text.strip():
+                st.text_area("Extracted Text (Preview)", value=extracted_text[:2000] + ("..." if len(extracted_text) > 2000 else ""), height=250, disabled=True)
+            else:
+                st.warning("⚠️ The document has no extractable text content (it might contain only images/scans).")
+    else:
+        st.error(f"❌ {status_message}")
     
     # 4. Main Page Workspace Tabs
     tab_summary, tab_ask_ai, tab_quiz = st.tabs([
