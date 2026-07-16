@@ -1,6 +1,7 @@
-"""Module containing utility functions and classes for processing and extracting content from PDF documents."""
+"""Module containing utility functions for parsing and extracting content from PDF documents."""
 
 import PyPDF2
+
 
 def extract_text_from_pdf(file_stream):
     """
@@ -48,9 +49,22 @@ def extract_text_from_pdf(file_stream):
         return full_text, True, f"Successfully extracted text from all {num_pages} pages.", num_pages
         
     except PyPDF2.errors.PdfReadError as e:
-        # Gracefully catch and handle corrupted PDF structural errors.
-        return "", False, f"Corrupted PDF Error: The uploaded file structure is invalid. Details: {str(e)}", 0
+        error_msg = (
+            f"Corrupted PDF Error: The uploaded file structure is invalid.\n\n"
+            f"Suggestions:\n"
+            f"1. Please verify that this is a valid, uncorrupted PDF document.\n"
+            f"2. Check if the file is encrypted or password-protected.\n"
+            f"3. Try re-exporting the document and upload it again.\n\n"
+            f"Technical Details: {str(e)}"
+        )
+        return "", False, error_msg, 0
         
     except Exception as e:
-        # Catch and handle any other unexpected file handling exceptions.
-        return "", False, f"Unexpected Error: Unable to read PDF document. Details: {str(e)}", 0
+        error_msg = (
+            f"Unexpected Ingestion Error: Unable to read PDF document.\n\n"
+            f"Suggestions:\n"
+            f"1. Ensure the file stream is not empty or closed.\n"
+            f"2. Verify you have read permissions for the source file.\n\n"
+            f"Technical Details: {str(e)}"
+        )
+        return "", False, error_msg, 0

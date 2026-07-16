@@ -1,11 +1,23 @@
-"""Main entry point for the Streamlit web application of the AI Research Assistant."""
+"""
+Main entry point for the Streamlit web application of the AI Research Assistant.
+
+This module sets up the Streamlit dashboard layout, handles file uploads,
+ingests and parses PDF texts using PyPDF2, and connects with Google Gemini
+API to generate document summaries, question answering, and quizzes.
+"""
 
 import streamlit as st
 from utils import inject_custom_css, format_file_size
 from pdf_processor import extract_text_from_pdf
-from ai_service import generate_response, generate_summary_sections, generate_quiz
+from ai_service import (
+    generate_response,
+    generate_summary_sections,
+    generate_quiz
+)
 
-# Set up page configurations first
+# ------------------------------------------
+# PAGE CONFIGURATION
+# ------------------------------------------
 st.set_page_config(
     page_title="AI Research Assistant",
     page_icon="🔬",
@@ -13,17 +25,16 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Inject custom CSS stylesheet for premium typography, spacing, and cards
+# Inject custom CSS styles for clean Outfit typography, margins, and card layouts
 inject_custom_css()
 
-# ==========================================
-# SIDEBAR SETUP
-# ==========================================
-# Sidebar header and branding
+# ------------------------------------------
+# SIDEBAR COMPONENTS
+# ------------------------------------------
 st.sidebar.markdown("# 🔬 AI Research Assistant")
 st.sidebar.markdown("---")
 
-# Upload PDF Button
+# PDF Document Uploader Widget
 uploaded_file = st.sidebar.file_uploader(
     "Upload a PDF Research Paper", 
     type=["pdf"], 
@@ -32,77 +43,110 @@ uploaded_file = st.sidebar.file_uploader(
 
 st.sidebar.markdown("---")
 
-# About Project Section
+# About Section in Sidebar
 with st.sidebar.expander("ℹ️ About Project", expanded=True):
     st.markdown("""
-    **AI Research Assistant** is a prototype dashboard designed to accelerate literature reviews and technical reading.
+    **AI Research Assistant** is a polished technical reading companion 
+    designed to accelerate literature reviews.
     
-    ### Core Workflows:
-    - **📄 Intelligent Summaries**: Overview of abstracts, methodologies, and findings.
-    - **💬 Contextual Chat (Ask AI)**: Interactive query response tailored to the document.
-    - **📝 Interactive Quizzes**: Automatically generated comprehension assessments.
+    ### Integrated Workflows:
+    - **📄 Structural Summaries**: High-level abstract, key takeaways, and topics.
+    - **💬 Grounded Q&A**: Strict, context-bounded document question answering.
+    - **📝 Interactive Quizzes**: Dynamic comprehension checks.
     
-    *Note: This prototype uses standard Streamlit components and simulated logic to run completely locally without API dependencies.*
+    *Powered by Google Gemini 2.5 Flash.*
     """)
 
-# ==========================================
-# MAIN PAGE SETUP
-# ==========================================
-# Main page title & header
+# ------------------------------------------
+# MAIN WORKSPACE HEADER
+# ------------------------------------------
 st.title("🔬 AI Research Assistant")
-st.markdown("##### *Streamlining publication analysis, summarization, and comprehension check.*")
+st.markdown(
+    "##### *Streamlining publication analysis, summarization, "
+    "and comprehension checks.*"
+)
 st.markdown("---")
 
+# ------------------------------------------
+# MAIN WORKSPACE LOGIC
+# ------------------------------------------
 if uploaded_file is not None:
-    # 1. Read document metadata
+    # 1. Read uploaded document metadata
     file_name = uploaded_file.name
     file_size = uploaded_file.size
     
-    # Extract text from the uploaded PDF using PyPDF2 with error handling
-    extracted_text, success, status_message, num_pages = extract_text_from_pdf(uploaded_file)
+    # Extract text content from the uploaded PDF using PyPDF2
+    extracted_text, success, status_message, num_pages = (
+        extract_text_from_pdf(uploaded_file)
+    )
     char_count = len(extracted_text)
     
-    # 2. Reset QA and Quiz states if a new file is uploaded
-    if "current_file" not in st.session_state or st.session_state.current_file != file_name:
+    # 2. Reset QA and Quiz states if a new document is uploaded
+    if (
+        "current_file" not in st.session_state 
+        or st.session_state.current_file != file_name
+    ):
         st.session_state.current_file = file_name
         if "qa_result" in st.session_state:
             del st.session_state.qa_result
+        if "doc_summary" in st.session_state:
+            del st.session_state.doc_summary
         if "doc_quiz" in st.session_state:
             del st.session_state.doc_quiz
+        if "summary_file" in st.session_state:
+            del st.session_state.summary_file
         if "quiz_file" in st.session_state:
             del st.session_state.quiz_file
         
-    # 2b. Generate and Cache AI Summaries if text extraction was successful
+    # 3. Generate and Cache AI Summaries if text extraction succeeded
     if success:
-        if "doc_summary" not in st.session_state or st.session_state.get("summary_file") != file_name:
-            with st.spinner("🔬 AI is analyzing the document text and generating summaries..."):
+        if (
+            "doc_summary" not in st.session_state 
+            or st.session_state.get("summary_file") != file_name
+        ):
+            # Display loading spinner while calling Gemini API
+            with st.spinner("🔬 Generating structured summaries..."):
                 try:
                     summary_data = generate_summary_sections(extracted_text)
                     st.session_state.doc_summary = summary_data
                     st.session_state.summary_file = file_name
                 except Exception as e:
-                    st.error(f"⚠️ Failed to generate AI summary: {str(e)}")
-                    # Fallback placeholders in case of failures
+                    st.error(
+                        f"⚠️ Summary Generation Failed.\n\n"
+                        f"Please check your API key and connection. "
+                        f"Details: {str(e)}"
+                    )
+                    # Define fallback placeholders
                     st.session_state.doc_summary = {
-                        "executive_summary": "Error: Unable to generate executive summary due to API failure.",
-                        "key_takeaways": "Error: Unable to generate key takeaways due to API failure.",
-                        "important_topics": "Error: Unable to generate important topics due to API failure."
+                        "executive_summary": (
+                            "Error: Unable to generate executive summary."
+                        ),
+                        "key_takeaways": "Error: Unable to generate takeaways.",
+                        "important_topics": "Error: Unable to generate topics."
                     }
                     st.session_state.summary_file = file_name      
         
-        # Generate and Cache Quiz
-        if "doc_quiz" not in st.session_state or st.session_state.get("quiz_file") != file_name:
-            with st.spinner("📝 Generating comprehension quiz from the document..."):
+        # 4. Generate and Cache Quiz if text extraction succeeded
+        if (
+            "doc_quiz" not in st.session_state 
+            or st.session_state.get("quiz_file") != file_name
+        ):
+            # Display loading spinner while calling Gemini API
+            with st.spinner("📝 Generating comprehension check..."):
                 try:
                     quiz_data = generate_quiz(extracted_text)
                     st.session_state.doc_quiz = quiz_data
                     st.session_state.quiz_file = file_name
                 except Exception as e:
-                    st.error(f"⚠️ Failed to generate quiz: {str(e)}")
+                    st.error(
+                        f"⚠️ Quiz Generation Failed.\n\n"
+                        f"Please check your API key and connection. "
+                        f"Details: {str(e)}"
+                    )
                     st.session_state.doc_quiz = []
                     st.session_state.quiz_file = file_name
         
-    # 3. Display Document Information Card
+    # 5. Display Document Information Card
     status_color = "#2a9d8f" if success else "#e63946"
     status_label = "⚡ Ready for Queries" if success else "❌ Extraction Failed"
     
@@ -134,28 +178,41 @@ if uploaded_file is not None:
     </div>
     """, unsafe_allow_html=True)
 
-    # 4. Display extraction status and preview
+    # 6. Display extraction status and preview expander
     if success:
         st.success(f"🎉 {status_message}")
         with st.expander("🔍 View Extracted Text Preview", expanded=False):
             if extracted_text.strip():
-                st.text_area("Extracted Text (Preview)", value=extracted_text[:2000] + ("..." if len(extracted_text) > 2000 else ""), height=250, disabled=True)
+                st.text_area(
+                    "Extracted Text (Preview)", 
+                    value=extracted_text[:2000] + (
+                        "..." if len(extracted_text) > 2000 else ""
+                    ), 
+                    height=250, 
+                    disabled=True
+                )
             else:
-                st.warning("⚠️ The document has no extractable text content (it might contain only images/scans).")
+                st.warning(
+                    "⚠️ The document has no extractable text content "
+                    "(it might contain only images/scans)."
+                )
     else:
         st.error(f"❌ {status_message}")
     
-    # 4. Main Page Workspace Tabs
+    # 7. Renders the main Workspace Tab Layout
     tab_summary, tab_qa, tab_quiz = st.tabs([
         "📄 Summary Overview", 
         "💬 Grounded Q&A", 
         "📝 Comprehension Quiz"
     ])
     
-    # Tab 1: Summary Overview
+    # --- Tab 1: Summary Overview ---
     with tab_summary:
         st.subheader("Generated Document Summary")
-        st.info("💡 Below is the AI-generated structural breakdown of the uploaded publication, organized into detailed categories.")
+        st.info(
+            "💡 Below is the AI-generated structural breakdown of the "
+            "uploaded publication, organized into detailed categories."
+        )
         
         # Retrieve cached summary sections
         if success and "doc_summary" in st.session_state:
@@ -170,33 +227,49 @@ if uploaded_file is not None:
             with st.expander("🏷️ Important Topics", expanded=False):
                 st.markdown(summary.get("important_topics", "No topics available."))
         else:
-            st.warning("⚠️ Document analysis is not available because text extraction failed.")
+            st.warning(
+                "⚠️ Document analysis is not available because text "
+                "extraction failed."
+            )
             
-    # Tab 2: Grounded Q&A
+    # --- Tab 2: Grounded Q&A ---
     with tab_qa:
         st.subheader("Document Grounded Q&A")
-        st.caption("Ask questions about the document. Gemini will respond strictly based on the extracted document text.")
+        st.caption(
+            "Ask questions about the document. Gemini will respond strictly "
+            "based on the extracted document text."
+        )
         
-        # User input question
-        user_query = st.text_input("Enter your question:", key="qa_input_field", placeholder="e.g. What is the main objective of this study?")
+        # Q&A Input Box and Submission Button
+        user_query = st.text_input(
+            "Enter your question:", 
+            key="qa_input_field", 
+            placeholder="e.g. What is the main objective of this study?"
+        )
         ask_button = st.button("Ask Assistant", type="primary")
         
         if ask_button and user_query:
             # Construct strict document grounding prompt
             grounded_prompt = (
-                "You are an AI Research Assistant. Your task is to answer the user's question ONLY using the facts directly mentioned in the document context below.\n\n"
+                "You are an AI Research Assistant. Your task is to answer "
+                "the user's question ONLY using the facts directly mentioned "
+                "in the document context below.\n\n"
                 "Context from the document:\n"
                 "---START CONTEXT---\n"
                 f"{extracted_text[:40000]}\n"
                 "---END CONTEXT---\n\n"
                 f"User Question: {user_query}\n\n"
                 "Rules:\n"
-                "1. Answer the question truthfully and concisely based ONLY on the context provided.\n"
-                "2. If the context does not contain enough information to answer the question, you must respond EXACTLY with the phrase: "
-                "'The uploaded document does not contain enough information to answer this question.'\n"
+                "1. Answer the question truthfully and concisely based ONLY "
+                "on the context provided.\n"
+                "2. If the context does not contain enough information to "
+                "answer the question, you must respond EXACTLY with the phrase: "
+                "'The uploaded document does not contain enough information to "
+                "answer this question.'\n"
                 "3. Do not use any outside knowledge, assumptions, or speculations."
             )
             
+            # Request response from Gemini with loading spinner
             with st.spinner("Gemini is searching the document..."):
                 try:
                     response_text = generate_response(grounded_prompt)
@@ -209,11 +282,14 @@ if uploaded_file is not None:
                     st.error(f"⚠️ Error generating response: {str(e)}")
                     st.session_state.qa_result = {
                         "question": user_query,
-                        "answer": "Error generating response. Please check your API key configuration.",
+                        "answer": (
+                            "Error: Unable to generate response. "
+                            "Please check your API key configuration."
+                        ),
                         "success": False
                     }
                     
-        # Display the current QA result inside a clean, modern card if present
+        # Display current Q&A result inside a styled layout card
         if "qa_result" in st.session_state:
             result = st.session_state.qa_result
             st.markdown("---")
@@ -228,10 +304,13 @@ if uploaded_file is not None:
             </div>
             """, unsafe_allow_html=True)
             
-    # Tab 3: Comprehension Quiz
+    # --- Tab 3: Comprehension Quiz ---
     with tab_quiz:
         st.subheader("Interactive Comprehension Check")
-        st.caption("Verify your understanding of the document details with this generated check.")
+        st.caption(
+            "Verify your understanding of the document details with "
+            "this generated check."
+        )
         
         if success and "doc_quiz" in st.session_state and st.session_state.doc_quiz:
             quiz_list = st.session_state.doc_quiz
@@ -242,11 +321,14 @@ if uploaded_file is not None:
                 q_options = q_item.get("options", [])
                 correct_ans = q_item.get("correct_answer", "")
                 
-                # Render inside a separate expander
-                with st.expander(f"❓ Question {q_num}: {q_text[:80]}...", expanded=(idx == 0)):
+                # Render each question inside its own collapsible expander
+                with st.expander(
+                    f"❓ Question {q_num}: {q_text[:80]}...", 
+                    expanded=(idx == 0)
+                ):
                     st.markdown(f"##### {q_text}")
                     
-                    # Interactive user option selection
+                    # Option selection buttons
                     user_ans = st.radio(
                         f"Select your answer for Question {q_num}:",
                         q_options,
@@ -259,12 +341,18 @@ if uploaded_file is not None:
                         if user_ans == correct_ans:
                             st.success("🎉 **Correct!** Great job.")
                         else:
-                            st.error(f"❌ **Incorrect.** The correct answer is: {correct_ans}")
+                            st.error(
+                                f"❌ **Incorrect.** "
+                                f"The correct answer is: {correct_ans}"
+                            )
         else:
-            st.warning("⚠️ Comprehension quiz is not available because document processing failed or is incomplete.")
+            st.warning(
+                "⚠️ Comprehension quiz is not available because document "
+                "processing failed or is incomplete."
+            )
 
 else:
-    # Landing page display when no file is uploaded yet
+    # Onboarding instructions when no PDF file has been uploaded
     st.info("👈 Please upload a PDF publication in the sidebar to start analysis.")
     
     st.markdown("""
@@ -293,9 +381,9 @@ else:
     </div>
     """, unsafe_allow_html=True)
 
-# ==========================================
-# FOOTER SETUP
-# ==========================================
+# ------------------------------------------
+# WORKSPACE FOOTER
+# ------------------------------------------
 st.markdown("""
 <div class="custom-footer">
     Developed with ❤️ using Streamlit • AI Research Assistant Prototype v1.0
