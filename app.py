@@ -62,15 +62,11 @@ if uploaded_file is not None:
     extracted_text, success, status_message, num_pages = extract_text_from_pdf(uploaded_file)
     char_count = len(extracted_text)
     
-    # 2. Reset Chat History if a new file is uploaded
+    # 2. Reset QA state if a new file is uploaded
     if "current_file" not in st.session_state or st.session_state.current_file != file_name:
         st.session_state.current_file = file_name
-        st.session_state.messages = [
-            {
-                "role": "assistant", 
-                "content": f"Hello! I have completed processing the document '{file_name}' ({num_pages} pages). Ask me any specific questions about its results, methodologies, or findings!"
-            }
-        ]
+        if "qa_result" in st.session_state:
+            del st.session_state.qa_result
         
     # 2b. Generate and Cache AI Summaries if text extraction was successful
     if success:
@@ -134,9 +130,9 @@ if uploaded_file is not None:
         st.error(f"❌ {status_message}")
     
     # 4. Main Page Workspace Tabs
-    tab_summary, tab_ask_ai, tab_quiz = st.tabs([
+    tab_summary, tab_qa, tab_quiz = st.tabs([
         "📄 Summary Overview", 
-        "💬 Ask AI Chat", 
+        "💬 Grounded Q&A", 
         "📝 Comprehension Quiz"
     ])
     
@@ -160,46 +156,61 @@ if uploaded_file is not None:
         else:
             st.warning("⚠️ Document analysis is not available because text extraction failed.")
             
-    # Tab 2: Ask AI Chat
-    with tab_ask_ai:
-        st.subheader("Document Q&A Chatroom")
-        st.caption("Ask specific questions, request mathematical proofs, or clarify conclusions below.")
+    # Tab 2: Grounded Q&A
+    with tab_qa:
+        st.subheader("Document Grounded Q&A")
+        st.caption("Ask questions about the document. Gemini will respond strictly based on the extracted document text.")
         
-        # Render the chat dialog history
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.write(message["content"])
-                
-        # User input text input box
-        if prompt := st.chat_input("Ask a question about the document..."):
-            # Display user query
-            with st.chat_message("user"):
-                st.write(prompt)
-            st.session_state.messages.append({"role": "user", "content": prompt})
-            
-            # Construct a structured prompt providing the document context to Gemini
-            prompt_with_context = (
-                f"You are a helpful AI Research Assistant analyzing the uploaded document '{file_name}'.\n\n"
-                f"Here is the text context extracted from the document:\n"
-                f"---START CONTEXT---\n"
+        # User input question
+        user_query = st.text_input("Enter your question:", key="qa_input_field", placeholder="e.g. What is the main objective of this study?")
+        ask_button = st.button("Ask Assistant", type="primary")
+        
+        if ask_button and user_query:
+            # Construct strict document grounding prompt
+            grounded_prompt = (
+                "You are an AI Research Assistant. Your task is to answer the user's question ONLY using the facts directly mentioned in the document context below.\n\n"
+                "Context from the document:\n"
+                "---START CONTEXT---\n"
                 f"{extracted_text[:40000]}\n"
-                f"---END CONTEXT---\n\n"
-                f"User Question: {prompt}\n\n"
-                f"Please answer the user's question accurately and clearly, relying on the text context provided above."
+                "---END CONTEXT---\n\n"
+                f"User Question: {user_query}\n\n"
+                "Rules:\n"
+                "1. Answer the question truthfully and concisely based ONLY on the context provided.\n"
+                "2. If the context does not contain enough information to answer the question, you must respond EXACTLY with the phrase: "
+                "'The uploaded document does not contain enough information to answer this question.'\n"
+                "3. Do not use any outside knowledge, assumptions, or speculations."
             )
             
-            # Request real response from Gemini API inside a spinner
-            with st.spinner("Assistant is analyzing and typing..."):
+            with st.spinner("Gemini is searching the document..."):
                 try:
-                    response_text = generate_response(prompt_with_context)
+                    response_text = generate_response(grounded_prompt)
+                    st.session_state.qa_result = {
+                        "question": user_query,
+                        "answer": response_text,
+                        "success": True
+                    }
                 except Exception as e:
                     st.error(f"⚠️ Error generating response: {str(e)}")
-                    response_text = "I encountered an error while trying to process your request. Please check your Gemini API key configuration and try again."
+                    st.session_state.qa_result = {
+                        "question": user_query,
+                        "answer": "Error generating response. Please check your API key configuration.",
+                        "success": False
+                    }
+                    
+        # Display the current QA result inside a clean, modern card if present
+        if "qa_result" in st.session_state:
+            result = st.session_state.qa_result
+            st.markdown("---")
+            st.markdown(f"**Question:** {result['question']}")
             
-            # Display assistant reply
-            with st.chat_message("assistant"):
-                st.write(response_text)
-            st.session_state.messages.append({"role": "assistant", "content": response_text})
+            card_border_color = "#2a9d8f" if result["success"] else "#e63946"
+            
+            st.markdown(f"""
+            <div class="premium-card" style="border-left: 5px solid {card_border_color}; margin-top: 15px;">
+                <h4 style="margin-top: 0; color: {card_border_color};">💡 Answer</h4>
+                <p style="font-size: 1rem; line-height: 1.6; margin-bottom: 0;">{result['answer']}</p>
+            </div>
+            """, unsafe_allow_html=True)
             
     # Tab 3: Comprehension Quiz
     with tab_quiz:
