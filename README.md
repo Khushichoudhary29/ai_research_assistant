@@ -16,6 +16,12 @@ See how the application parses PDFs and extracts information:
 
 ![App Working Demo](screenshots/working_demo.webp)
 
+### Research Paper Analysis Walkthrough
+See a recorded walkthrough of the application analyzing the uploaded cloud security RBAC research paper, running Q&A queries, and generating quiz results:
+
+![RBAC Paper Analysis Demo](screenshots/paper_demo.webp)
+
+
 ---
 
 ## 🔍 Example Analysis: Role-Based Access Control (RBAC) Research Paper
