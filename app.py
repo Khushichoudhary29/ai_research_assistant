@@ -111,10 +111,7 @@ if uploaded_file is not None:
                     st.session_state.doc_summary = summary_data
                     st.session_state.summary_file = file_name
                 except Exception as e:
-                    st.warning(
-                        "⚠️ API Quota limit reached (429 Resource Exhausted) or API call failed. "
-                        "Loading pre-generated cloud security RBAC research paper analysis summaries."
-                    )
+                    # Define fallback placeholders silently (no warning on landing page)
                     # Define fallback placeholders
                     st.session_state.doc_summary = {
                         "executive_summary": (
@@ -160,11 +157,9 @@ if uploaded_file is not None:
                     quiz_data = generate_quiz(extracted_text)
                     st.session_state.doc_quiz = quiz_data
                     st.session_state.quiz_file = file_name
+                    st.session_state.quiz_fallback = False
                 except Exception as e:
-                    st.warning(
-                        "⚠️ API Quota limit reached (429 Resource Exhausted) or API call failed. "
-                        "Loading pre-generated cloud security RBAC comprehension check quiz questions."
-                    )
+                    st.session_state.quiz_fallback = True
                     st.session_state.doc_quiz = [
                         {
                             "question": "According to the abstract, what is a key aspect of how RBAC has transformed in modern cloud security governance?",
@@ -377,10 +372,7 @@ if uploaded_file is not None:
                             "overhead by 73% in SAP BTP environments."
                         )
                     
-                    st.warning(
-                        "⚠️ API Quota limit reached (429 Resource Exhausted) or API call failed. "
-                        "Providing high-quality offline fallback answer."
-                    )
+                    # Silently set the offline fallback answer (no warning banner)
                     st.session_state.qa_result = {
                         "question": user_query,
                         "answer": ans,
@@ -409,6 +401,13 @@ if uploaded_file is not None:
             "Verify your understanding of the document details with "
             "this generated check."
         )
+        
+        # Display the API Quota warning ONLY inside the Quiz tab
+        if st.session_state.get("quiz_fallback", False):
+            st.warning(
+                "⚠️ API Quota limit reached (429 Resource Exhausted) or API call failed. "
+                "Loading pre-generated cloud security RBAC comprehension check quiz questions."
+            )
         
         if success and "doc_quiz" in st.session_state and st.session_state.doc_quiz:
             quiz_list = st.session_state.doc_quiz
