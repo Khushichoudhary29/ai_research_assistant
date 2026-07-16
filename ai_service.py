@@ -107,3 +107,58 @@ def generate_summary_sections(extracted_text):
     except Exception as e:
         # Catch and handle parsing or API errors
         raise Exception(f"Failed to generate structured summaries: {str(e)}")
+
+
+def generate_quiz(extracted_text):
+    """
+    Generates a 5-question multiple-choice quiz based on the document text using Gemini.
+    
+    Parameters:
+        extracted_text (str): The document text content.
+        
+    Returns:
+        list: A list of 5 dictionaries, each containing 'question', 'options', and 'correct_answer'.
+        
+    Raises:
+        ValueError: If the API key is missing.
+        Exception: If the API call or JSON parsing fails.
+    """
+    global client
+    
+    # If client is not initialized, check for API key again
+    if not client:
+        current_key = os.getenv("GEMINI_API_KEY")
+        if not current_key:
+            raise ValueError(
+                "GEMINI_API_KEY is not set or configured. Please set it in your .env file."
+            )
+        client = genai.Client(api_key=current_key)
+        
+    prompt = (
+        "Analyze the following document text and generate a comprehension quiz containing exactly 5 multiple-choice questions.\n\n"
+        "Rules:\n"
+        "1. Each question must have exactly 4 distinct options.\n"
+        "2. The correct answer must be one of the 4 options.\n"
+        "3. Focus on key themes, definitions, methodologies, or findings in the text.\n\n"
+        f"Document Text:\n{extracted_text[:40000]}\n\n"
+        "Return the output as a valid JSON array of objects, where each object has the exact keys: 'question', 'options', and 'correct_answer' (options should be a list of strings, and correct_answer must be one of those strings)."
+    )
+    
+    try:
+        # Request a JSON mime type response from the Gemini client
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json"
+            )
+        )
+        
+        # Load and parse the returned JSON string
+        import json
+        parsed_data = json.loads(response.text)
+        return parsed_data
+        
+    except Exception as e:
+        # Catch and handle parsing or API errors
+        raise Exception(f"Failed to generate quiz: {str(e)}")

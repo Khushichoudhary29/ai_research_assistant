@@ -3,7 +3,7 @@
 import streamlit as st
 from utils import inject_custom_css, format_file_size
 from pdf_processor import extract_text_from_pdf
-from ai_service import generate_response, generate_summary_sections
+from ai_service import generate_response, generate_summary_sections, generate_quiz
 
 # Set up page configurations first
 st.set_page_config(
@@ -62,11 +62,15 @@ if uploaded_file is not None:
     extracted_text, success, status_message, num_pages = extract_text_from_pdf(uploaded_file)
     char_count = len(extracted_text)
     
-    # 2. Reset QA state if a new file is uploaded
+    # 2. Reset QA and Quiz states if a new file is uploaded
     if "current_file" not in st.session_state or st.session_state.current_file != file_name:
         st.session_state.current_file = file_name
         if "qa_result" in st.session_state:
             del st.session_state.qa_result
+        if "doc_quiz" in st.session_state:
+            del st.session_state.doc_quiz
+        if "quiz_file" in st.session_state:
+            del st.session_state.quiz_file
         
     # 2b. Generate and Cache AI Summaries if text extraction was successful
     if success:
@@ -85,6 +89,18 @@ if uploaded_file is not None:
                         "important_topics": "Error: Unable to generate important topics due to API failure."
                     }
                     st.session_state.summary_file = file_name      
+        
+        # Generate and Cache Quiz
+        if "doc_quiz" not in st.session_state or st.session_state.get("quiz_file") != file_name:
+            with st.spinner("📝 Generating comprehension quiz from the document..."):
+                try:
+                    quiz_data = generate_quiz(extracted_text)
+                    st.session_state.doc_quiz = quiz_data
+                    st.session_state.quiz_file = file_name
+                except Exception as e:
+                    st.error(f"⚠️ Failed to generate quiz: {str(e)}")
+                    st.session_state.doc_quiz = []
+                    st.session_state.quiz_file = file_name
         
     # 3. Display Document Information Card
     status_color = "#2a9d8f" if success else "#e63946"
@@ -217,27 +233,35 @@ if uploaded_file is not None:
         st.subheader("Interactive Comprehension Check")
         st.caption("Verify your understanding of the document details with this generated check.")
         
-        # We wrap in a streamlit form to manage check buttons and selections elegantly
-        with st.form(key="comprehension_quiz_form"):
-            st.markdown("##### **Question 1:** Which optimization factor directly reduces RAM consumption in the proposed architecture?")
+        if success and "doc_quiz" in st.session_state and st.session_state.doc_quiz:
+            quiz_list = st.session_state.doc_quiz
             
-            options = [
-                "Deploying GPU-accelerated storage disks",
-                "Employing garbage collection schedules and dynamic workers",
-                "Encrypting memory spaces via hardware security keys",
-                "Disabling standard visual styling components"
-            ]
-            
-            selected_option = st.radio("Select the correct answer option:", options, index=None)
-            submit_quiz = st.form_submit_button(label="Submit Answer")
-            
-            if submit_quiz:
-                if selected_option == "Employing garbage collection schedules and dynamic workers":
-                    st.success("🎉 **Correct!** The methodology specifically outlines dynamic worker allocations to keep system resources optimized.")
-                elif selected_option is None:
-                    st.warning("⚠️ Please select one of the multiple-choice options before submitting your response.")
-                else:
-                    st.error("❌ **Incorrect.** Hint: Check the Key Contributions section of the Summary Overview tab.")
+            for idx, q_item in enumerate(quiz_list):
+                q_num = idx + 1
+                q_text = q_item.get("question", f"Question {q_num}")
+                q_options = q_item.get("options", [])
+                correct_ans = q_item.get("correct_answer", "")
+                
+                # Render inside a separate expander
+                with st.expander(f"❓ Question {q_num}: {q_text[:80]}...", expanded=(idx == 0)):
+                    st.markdown(f"##### {q_text}")
+                    
+                    # Interactive user option selection
+                    user_ans = st.radio(
+                        f"Select your answer for Question {q_num}:",
+                        q_options,
+                        index=None,
+                        key=f"quiz_q_option_{q_num}"
+                    )
+                    
+                    # Validate answer selection
+                    if user_ans:
+                        if user_ans == correct_ans:
+                            st.success("🎉 **Correct!** Great job.")
+                        else:
+                            st.error(f"❌ **Incorrect.** The correct answer is: {correct_ans}")
+        else:
+            st.warning("⚠️ Comprehension quiz is not available because document processing failed or is incomplete.")
 
 else:
     # Landing page display when no file is uploaded yet
