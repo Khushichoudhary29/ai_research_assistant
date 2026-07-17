@@ -16,11 +16,12 @@ See how the application parses PDFs and extracts information:
 
 ![App Working Demo](screenshots/working_demo.webp)
 
-### Research Paper Analysis Walkthrough
-See a recorded walkthrough of the application analyzing the uploaded cloud security RBAC research paper, running Q&A queries, and generating quiz results:
+### Research Paper Analysis & Q&A Screenshots
+Here are screenshots of the application analyzing the uploaded cloud security RBAC research paper and answering contextual questions:
 
-![RBAC Paper Analysis Demo](screenshots/paper_demo.webp)
+![RBAC Paper Analysis Overview](screenshots/paper_demo.png)
 
+![Grounded Q&A Results](screenshots/Q&A_demo.png)
 
 ---
 
