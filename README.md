@@ -81,6 +81,18 @@ streamlit run app.py
 - **Offline PDF OCR parsing**: Integrate Tesseract or EasyOCR engines to read and extract textual context from image-only scans and diagrams.
 - **Data Exporting**: Enable downloading summaries, conversation history cards, and quiz results as Markdown, CSV, or PDF reports.
 
+---
+
+## 🎓 Key Learning Points from Project
+
+Building the AI Research Assistant provided key insights and learning outcomes in several areas of modern web and AI engineering:
+
+- **State Management & Caching in Streamlit**: Persisting structured data (such as summaries and quiz objects) in `st.session_state` prevents redundant model generation calls and ensures rapid UI transitions when switching tabs.
+- **Structured JSON Mode**: Leveraging Gemini's `response_mime_type="application/json"` ensures that AI outputs for summaries and quizzes adhere strictly to predefined schemas, facilitating robust application logic.
+- **Resilient Fallback Design**: Configuring local mock fallbacks ensures that rate limits (e.g., `429 Resource Exhausted`) do not crash the application, maintaining a functional user experience even during service degradation.
+- **Strict QA Grounding**: Implementing strict system prompts forces the model to answer questions using *only* the uploaded document's context, preventing hallucinations and ensuring high-fidelity answers.
+- **PDF Text Parsing**: Handling text extraction challenges gracefully, including file size display, page counting, and failure notifications.
+- **Custom UI Theming**: Injecting custom CSS styles dynamically into Streamlit to design clean Outfit-typography layout panels, cards, and custom footers.
 
 ---
 
