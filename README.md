@@ -73,9 +73,14 @@ streamlit run app.py
 ---
 
 ## 📈 Future Enhancements
-- Support for uploading multiple documents.
-- Adding vector search (RAG) to handle extremely long books.
-- Exporting quiz scores and summary text.
+- **Multi-File & Cross-Paper Analysis**: Allow uploading multiple documents and comparing methodologies, findings, or metrics across them.
+- **RAG & Vector Embeddings**: Integrate a local vector store (such as ChromaDB or FAISS) to support semantic search and question answering across large textbooks or folders of publications.
+- **Auto Reference Linking**: Extract cited publications and automatically fetch their abstracts or link them directly to Google Scholar / CrossRef.
+- **Key Formula & LaTeX Indexing**: Identify, extract, and render complex mathematical formulas, symbols, and proof logic in standard LaTeX.
+- **Voiceover Summaries (Text-to-Speech)**: Generate audio files from the Executive Summary and Key Takeaways for technical learning on the go.
+- **Offline PDF OCR parsing**: Integrate Tesseract or EasyOCR engines to read and extract textual context from image-only scans and diagrams.
+- **Data Exporting**: Enable downloading summaries, conversation history cards, and quiz results as Markdown, CSV, or PDF reports.
+
 
 ---
 
